@@ -2,6 +2,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Represents the state of a game.
+ * <p>
+ * Offers methods for transitioning to a next state ({@link #player1WonPoint(GameContext)}
+ * and {@link #player2WonPoint(GameContext)}) as well as querying the current state
+ * ({@link #getScore(GameContext)}).
+ * <p>
+ * Instances are stateless due to {@link GameContext} and therefore thread safe.
+ * <p>
+ * Instances may implement {@link #toString()} for debug purposes.
+ */
 interface GameState {
 
     static final GameState ADVANTAGE_PLAYER1 = new AdvantagePlayer1();
@@ -14,10 +25,12 @@ interface GameState {
 
     static final GameState DEUCE = new Deuce();
 
+    static final GameState INITIAL_STATE = computeInitialState();
+
     GameState player1WonPoint(GameContext context);
     GameState player2WonPoint(GameContext context);
     String getScore(GameContext context);
-    GameState flip();
+    GameState flip(); // REVIEW, only needed for construction
 
     interface GameContext {
 
@@ -27,7 +40,8 @@ interface GameState {
 
     }
 
-    static GameState getInitialState() {
+    private static GameState computeInitialState() {
+
         Map<ScoreLookupKey, GameState> computed = new HashMap<>();
 
         computed.put(new ScoreLookupKey(3, 3), DEUCE);
@@ -55,10 +69,10 @@ interface GameState {
                     } else {
                         GameState state = new GenericGameState(i, j, player1Wins, player2Wins);
                         computed.put(key, state);
-                        // if i-j wasn't in the map, j-i will also not be in it, no need to check
+                        // if i-j wasn't in the map then j-i will also not be in the map, no need to check
                         computed.put(key.flipPlayerScores(), state.flip());
                     }
-                    
+
                 }
             }
 
@@ -66,7 +80,12 @@ interface GameState {
         return new All(0, computed.get(new ScoreLookupKey(1, 0)), computed.get(new ScoreLookupKey(0, 1)));
     }
 
+    static GameState getInitialState() {
+        return INITIAL_STATE;
+    }
+
     static final class ScoreLookupKey {
+        // REVIEW no need to use 2 ints, fits into 1 byte
 
         private final int scorePlayer1;
 
@@ -91,7 +110,10 @@ interface GameState {
 
         @Override
         public int hashCode() {
-            return Objects.hash(scorePlayer1, scorePlayer2);
+            // scorePlayer1 and scorePlayer2 don't exceed 4
+            // this gives us a unique hashCode for all used values
+            // by only using the lower 6 bits
+            return Integer.rotateLeft(scorePlayer1, 3)  ^  scorePlayer2;
         }
 
         @Override
@@ -103,7 +125,8 @@ interface GameState {
                 return false;
             }
             ScoreLookupKey other = (ScoreLookupKey) obj;
-            return scorePlayer1 == other.scorePlayer1 && scorePlayer2 == other.scorePlayer2;
+            return scorePlayer1 == other.scorePlayer1
+                    && scorePlayer2 == other.scorePlayer2;
         }
 
         @Override
@@ -172,10 +195,11 @@ interface GameState {
         public String toString() {
             return this.getScore();
         }
-        
+
         @Override
         public GameState flip() {
-            // 3-0 (player1wins, (3,1)) -> 0-3(player2win, (1-3))
+            // 3-0 (player1wins, (3,1)) -> 0-3((1-3), player2win)
+            // REVIEW, recursive, ends up creating equal copies
             return new GenericGameState(this.scorePlayer2, this.scorePlayer1, this.player2Wins.flip(), this.player1Wins.flip());
         }
 
@@ -196,12 +220,12 @@ interface GameState {
             this.player2Wins = player2Wins;
             this.score = score;
         }
-        
+
         @Override
         public GameState player1WonPoint(GameState.GameContext context) {
             return this.player1Wins;
         }
-        
+
         @Override
         public GameState player2WonPoint(GameState.GameContext context) {
             return this.player2Wins;
@@ -253,7 +277,7 @@ interface GameState {
         public GameState flip() {
             return this;
         }
-        
+
         @Override
         public String toString() {
             return this.getScore();
@@ -294,6 +318,11 @@ interface GameState {
             return ADVANTAGE_PLAYER2;
         }
 
+        @Override
+        public String toString() {
+            return "Advantage player1";
+        }
+
     }
 
     final class AdvantagePlayer2 extends Advantage {
@@ -316,6 +345,11 @@ interface GameState {
         @Override
         public GameState flip() {
             return ADVANTAGE_PLAYER1;
+        }
+
+        @Override
+        public String toString() {
+            return "Advantage player2";
         }
 
     }
@@ -357,6 +391,11 @@ interface GameState {
             return WIN_PLAYER2;
         }
 
+        @Override
+        public String toString() {
+            return "Win for player1";
+        }
+
     }
 
     final class WinPlayer2 extends WonGame {
@@ -369,6 +408,11 @@ interface GameState {
         @Override
         public GameState flip() {
             return WIN_PLAYER1;
+        }
+
+        @Override
+        public String toString() {
+            return "Win for player2";
         }
 
     }
