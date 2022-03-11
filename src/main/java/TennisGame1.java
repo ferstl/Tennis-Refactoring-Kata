@@ -1,76 +1,46 @@
+import java.util.Objects;
 
 public class TennisGame1 implements TennisGame {
-    
-    private int m_score1 = 0;
-    private int m_score2 = 0;
-    private String player1Name;
-    private String player2Name;
+
+    private final String player1Name;
+    private final String player2Name;
+    private GameState gameState;
+    private final GameState.GameContext gameContext;
 
     public TennisGame1(String player1Name, String player2Name) {
+        Objects.requireNonNull(player1Name, "player1Name");
+        Objects.requireNonNull(player2Name, "player2Name");
+        if (player1Name.equals(player2Name)) {
+            throw new IllegalArgumentException("player names must be distint but where: " + player1Name);
+        }
         this.player1Name = player1Name;
         this.player2Name = player2Name;
+        this.gameState = GameState.getInitialState();
+        this.gameContext = new GameState.GameContext() {
+            
+            @Override
+            public String getPlayer1() {
+                return TennisGame1.this.player1Name;
+            }
+            
+            @Override
+            public String getPlayer2() {
+                return TennisGame1.this.player2Name;
+            }
+        };
     }
 
     public void wonPoint(String playerName) {
-        if (playerName == "player1")
-            m_score1 += 1;
-        else
-            m_score2 += 1;
+        if (this.player1Name.equals(playerName)) {
+            this.gameState = this.gameState.player1WonPoint(this.gameContext);
+        } else if (this.player2Name.equals(playerName)) {
+            this.gameState = this.gameState.player2WonPoint(this.gameContext);
+        } else {
+            throw new IllegalArgumentException("unknown player name: " + playerName);
+        }
     }
 
     public String getScore() {
-        String score = "";
-        int tempScore=0;
-        if (m_score1==m_score2)
-        {
-            switch (m_score1)
-            {
-                case 0:
-                        score = "Love-All";
-                    break;
-                case 1:
-                        score = "Fifteen-All";
-                    break;
-                case 2:
-                        score = "Thirty-All";
-                    break;
-                default:
-                        score = "Deuce";
-                    break;
-                
-            }
-        }
-        else if (m_score1>=4 || m_score2>=4)
-        {
-            int minusResult = m_score1-m_score2;
-            if (minusResult==1) score ="Advantage player1";
-            else if (minusResult ==-1) score ="Advantage player2";
-            else if (minusResult>=2) score = "Win for player1";
-            else score ="Win for player2";
-        }
-        else
-        {
-            for (int i=1; i<3; i++)
-            {
-                if (i==1) tempScore = m_score1;
-                else { score+="-"; tempScore = m_score2;}
-                switch(tempScore)
-                {
-                    case 0:
-                        score+="Love";
-                        break;
-                    case 1:
-                        score+="Fifteen";
-                        break;
-                    case 2:
-                        score+="Thirty";
-                        break;
-                    case 3:
-                        score+="Forty";
-                        break;
-                }
-            }
-        }
-        return score;
+        return this.gameState.getScore(this.gameContext);
     }
 }
