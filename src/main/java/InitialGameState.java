@@ -24,17 +24,17 @@ final class InitialGameState {
 
     private static GameState computeInitialState() {
 
-        Map<ScoreLookupKey, FlipableGameState> computed = new HashMap<>();
+        Map<GameStateLookupKey, FlipableGameState> computed = new HashMap<>();
 
-        computed.put(new ScoreLookupKey(3, 3), DEUCE);
-        computed.put(new ScoreLookupKey(4, 4), DEUCE);
+        computed.put(new GameStateLookupKey(3, 3), DEUCE);
+        computed.put(new GameStateLookupKey(4, 4), DEUCE);
 
-        computed.put(new ScoreLookupKey(4, 3), ADVANTAGE_PLAYER1);
-        computed.put(new ScoreLookupKey(3, 4), ADVANTAGE_PLAYER2);
+        computed.put(new GameStateLookupKey(4, 3), ADVANTAGE_PLAYER1);
+        computed.put(new GameStateLookupKey(3, 4), ADVANTAGE_PLAYER2);
 
         // all wins that weren't proceeded with "Advantage player X"
         for (int i = 0; i <= 2; i++) {
-            ScoreLookupKey key = new ScoreLookupKey(4, i);
+            GameStateLookupKey key = new GameStateLookupKey(4, i);
             computed.put(key, WIN_PLAYER1);
             computed.put(key.flipPlayerScores(), WIN_PLAYER2);
         }
@@ -43,7 +43,7 @@ final class InitialGameState {
         // They are either wins or "Advantage player X".
         for (int i = 3; i > 0; i--) {
             for (int j = i; j >= 0; j--) {
-                ScoreLookupKey key = new ScoreLookupKey(i, j);
+                GameStateLookupKey key = new GameStateLookupKey(i, j);
                 if (!computed.containsKey(key)) {
                     FlipableGameState player1Wins = computed.get(key.incrementPlayer1());
                     FlipableGameState player2Wins = computed.get(key.incrementPlayer2());
@@ -61,35 +61,45 @@ final class InitialGameState {
             }
 
         }
-        return new All(0, computed.get(new ScoreLookupKey(1, 0)), computed.get(new ScoreLookupKey(0, 1)));
+        return new All(0, computed.get(new GameStateLookupKey(1, 0)), computed.get(new GameStateLookupKey(0, 1)));
     }
 
     static GameState getInitialState() {
         return INITIAL_STATE;
     }
 
-    static final class ScoreLookupKey {
+    /**
+     * Look up a {@link GameState} by the score of each player.
+     */
+    static final class GameStateLookupKey {
         // REVIEW no need to use 2 ints, fits into 1 byte
+        // can save 8 bytes, see JDK-8237767
 
         private final int scorePlayer1;
 
         private final int scorePlayer2;
 
-        ScoreLookupKey(int scorePlayer1, int scorePlayer2) {
+        GameStateLookupKey(int scorePlayer1, int scorePlayer2) {
+            if (scorePlayer1 > 4 || scorePlayer1 < 0) {
+                throw new IllegalArgumentException("invalid scorePlayer1");
+            }
+            if (scorePlayer2 > 4 || scorePlayer2 < 0) {
+                throw new IllegalArgumentException("invalid scorePlayer2");
+            }
             this.scorePlayer1 = scorePlayer1;
             this.scorePlayer2 = scorePlayer2;
         }
 
-        ScoreLookupKey incrementPlayer1() {
-            return new ScoreLookupKey(this.scorePlayer1 + 1, this.scorePlayer2);
+        GameStateLookupKey incrementPlayer1() {
+            return new GameStateLookupKey(this.scorePlayer1 + 1, this.scorePlayer2);
         }
 
-        ScoreLookupKey incrementPlayer2() {
-            return new ScoreLookupKey(this.scorePlayer1, this.scorePlayer2 + 1);
+        GameStateLookupKey incrementPlayer2() {
+            return new GameStateLookupKey(this.scorePlayer1, this.scorePlayer2 + 1);
         }
 
-        ScoreLookupKey flipPlayerScores() {
-            return new ScoreLookupKey(this.scorePlayer2, this.scorePlayer1);
+        GameStateLookupKey flipPlayerScores() {
+            return new GameStateLookupKey(this.scorePlayer2, this.scorePlayer1);
         }
 
         @Override
@@ -105,10 +115,10 @@ final class InitialGameState {
             if (this == obj) {
                 return true;
             }
-            if (!(obj instanceof ScoreLookupKey)) {
+            if (!(obj instanceof GameStateLookupKey)) {
                 return false;
             }
-            ScoreLookupKey other = (ScoreLookupKey) obj;
+            GameStateLookupKey other = (GameStateLookupKey) obj;
             return scorePlayer1 == other.scorePlayer1
                     && scorePlayer2 == other.scorePlayer2;
         }
@@ -122,20 +132,22 @@ final class InitialGameState {
 
     private static String translate(int score) {
         switch (score) {
-        case 0:
-            return "Love";
-        case 1:
-            return "Fifteen";
-        case 2:
-            return "Thirty";
-        case 3:
-            return "Forty";
-        default:
-            throw new IllegalArgumentException("unsupported score: " + score);
+            case 0:
+                return "Love";
+            case 1:
+                return "Fifteen";
+            case 2:
+                return "Thirty";
+            case 3:
+                return "Forty";
+            default:
+                throw new IllegalArgumentException("unsupported score: " + score);
         }
     }
 
     private static final class GenericGameState implements FlipableGameState {
+        // REVIEW no need to use 2 ints, fits into 1 byte
+        // can save 8 bytes, see JDK-8237767
 
         private final int scorePlayer1;
 
@@ -149,8 +161,14 @@ final class InitialGameState {
             if (scorePlayer1 >= 4) {
                 throw new IllegalArgumentException(AdvantagePlayer1.class + " shold be used");
             }
+            if (scorePlayer1 < 0) {
+                throw new IllegalArgumentException("negative score for player1");
+            }
             if (scorePlayer2 >= 4) {
                 throw new IllegalArgumentException(AdvantagePlayer2.class + " shold be used");
+            }
+            if (scorePlayer2 < 0) {
+                throw new IllegalArgumentException("negative score for player2");
             }
             this.scorePlayer1 = scorePlayer1;
             this.scorePlayer2 = scorePlayer2;
