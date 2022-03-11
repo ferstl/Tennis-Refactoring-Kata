@@ -4,13 +4,13 @@ import java.util.Objects;
 
 final class InitialGameState {
 
-    private static final FlipableGameState ADVANTAGE_PLAYER1 = new AdvantagePlayer1();
+    private static final FlipableGameState ADVANTAGE_SERVER = new AdvantageServer();
 
-    private static final FlipableGameState ADVANTAGE_PLAYER2 = new AdvantagePlayer2();
+    private static final FlipableGameState ADVANTAGE_RECIVER = new AdvantageReceiver();
 
-    private static final FlipableGameState WIN_PLAYER1 = new WinPlayer1();
+    private static final FlipableGameState WIN_SERVER = new WinServer();
 
-    private static final FlipableGameState WIN_PLAYER2 = new WinPlayer2();
+    private static final FlipableGameState WIN_RECIEVER = new WinReceiver();
 
     private static final FlipableGameState DEUCE = new Deuce();
 
@@ -29,14 +29,14 @@ final class InitialGameState {
         computed.put(new GameStateLookupKey(3, 3), DEUCE);
         computed.put(new GameStateLookupKey(4, 4), DEUCE);
 
-        computed.put(new GameStateLookupKey(4, 3), ADVANTAGE_PLAYER1);
-        computed.put(new GameStateLookupKey(3, 4), ADVANTAGE_PLAYER2);
+        computed.put(new GameStateLookupKey(4, 3), ADVANTAGE_SERVER);
+        computed.put(new GameStateLookupKey(3, 4), ADVANTAGE_RECIVER);
 
         // all wins that weren't proceeded with "Advantage player X"
         for (int i = 0; i <= 2; i++) {
             GameStateLookupKey key = new GameStateLookupKey(4, i);
-            computed.put(key, WIN_PLAYER1);
-            computed.put(key.flipPlayerScores(), WIN_PLAYER2);
+            computed.put(key, WIN_SERVER);
+            computed.put(key.flipPlayerScores(), WIN_RECIEVER);
         }
 
         // No need to start with 4, because all 4 based states are already in the map.
@@ -45,13 +45,13 @@ final class InitialGameState {
             for (int j = i; j >= 0; j--) {
                 GameStateLookupKey key = new GameStateLookupKey(i, j);
                 if (!computed.containsKey(key)) {
-                    FlipableGameState player1Wins = computed.get(key.incrementPlayer1());
-                    FlipableGameState player2Wins = computed.get(key.incrementPlayer2());
+                    FlipableGameState serverWins = computed.get(key.incrementServer());
+                    FlipableGameState receiverWins = computed.get(key.incrementReceiver());
                     if (i == j) {
-                        FlipableGameState state = new All(i, player1Wins, player2Wins);
+                        FlipableGameState state = new All(i, serverWins, receiverWins);
                         computed.put(key, state);
                     } else {
-                        FlipableGameState state = new GenericGameState(i, j, player1Wins, player2Wins);
+                        FlipableGameState state = new GenericGameState(i, j, serverWins, receiverWins);
                         computed.put(key, state);
                         // if i-j wasn't in the map then j-i will also not be in the map, no need to check
                         computed.put(key.flipPlayerScores(), state.flip());
@@ -75,39 +75,39 @@ final class InitialGameState {
         // REVIEW no need to use 2 ints, fits into 1 byte
         // can save 8 bytes, see JDK-8237767
 
-        private final int scorePlayer1;
+        private final int serverScore;
 
-        private final int scorePlayer2;
+        private final int receiverScore;
 
-        GameStateLookupKey(int scorePlayer1, int scorePlayer2) {
-            if (scorePlayer1 > 4 || scorePlayer1 < 0) {
-                throw new IllegalArgumentException("invalid scorePlayer1");
+        GameStateLookupKey(int serverScore, int receiverScore) {
+            if (serverScore > 4 || serverScore < 0) {
+                throw new IllegalArgumentException("invalid serverScore");
             }
-            if (scorePlayer2 > 4 || scorePlayer2 < 0) {
-                throw new IllegalArgumentException("invalid scorePlayer2");
+            if (receiverScore > 4 || receiverScore < 0) {
+                throw new IllegalArgumentException("invalid receiverScore");
             }
-            this.scorePlayer1 = scorePlayer1;
-            this.scorePlayer2 = scorePlayer2;
+            this.serverScore = serverScore;
+            this.receiverScore = receiverScore;
         }
 
-        GameStateLookupKey incrementPlayer1() {
-            return new GameStateLookupKey(this.scorePlayer1 + 1, this.scorePlayer2);
+        GameStateLookupKey incrementServer() {
+            return new GameStateLookupKey(this.serverScore + 1, this.receiverScore);
         }
 
-        GameStateLookupKey incrementPlayer2() {
-            return new GameStateLookupKey(this.scorePlayer1, this.scorePlayer2 + 1);
+        GameStateLookupKey incrementReceiver() {
+            return new GameStateLookupKey(this.serverScore, this.receiverScore + 1);
         }
 
         GameStateLookupKey flipPlayerScores() {
-            return new GameStateLookupKey(this.scorePlayer2, this.scorePlayer1);
+            return new GameStateLookupKey(this.receiverScore, this.serverScore);
         }
 
         @Override
         public int hashCode() {
-            // scorePlayer1 and scorePlayer2 don't exceed 4
+            // serverScore and receiverScore don't exceed 4
             // this gives us a unique hashCode for all used values
             // by only using the lower 6 bits
-            return Integer.rotateLeft(scorePlayer1, 3)  ^  scorePlayer2;
+            return Integer.rotateLeft(serverScore, 3)  ^  receiverScore;
         }
 
         @Override
@@ -119,13 +119,13 @@ final class InitialGameState {
                 return false;
             }
             GameStateLookupKey other = (GameStateLookupKey) obj;
-            return scorePlayer1 == other.scorePlayer1
-                    && scorePlayer2 == other.scorePlayer2;
+            return serverScore == other.serverScore
+                    && receiverScore == other.receiverScore;
         }
 
         @Override
         public String toString() {
-            return "(" + this.scorePlayer1 + ", " + this.scorePlayer2 + ")";
+            return "(" + this.serverScore + ", " + this.receiverScore + ")";
         }
 
     }
@@ -149,44 +149,44 @@ final class InitialGameState {
         // REVIEW no need to use 2 ints, fits into 1 byte
         // can save 8 bytes, see JDK-8237767
 
-        private final int scorePlayer1;
+        private final int serverScore;
 
-        private final int scorePlayer2;
+        private final int receiverScore;
 
-        private final FlipableGameState player1Wins;
+        private final FlipableGameState serverWins;
 
-        private final FlipableGameState player2Wins;
+        private final FlipableGameState receiverWins;
 
-        GenericGameState(int scorePlayer1, int scorePlayer2, FlipableGameState player1Wins, FlipableGameState player2Wins) {
-            if (scorePlayer1 >= 4) {
-                throw new IllegalArgumentException(AdvantagePlayer1.class + " shold be used");
+        GenericGameState(int serverScore, int receiverScore, FlipableGameState serverWins, FlipableGameState receiverWins) {
+            if (serverScore >= 4) {
+                throw new IllegalArgumentException(AdvantageServer.class + " shold be used");
             }
-            if (scorePlayer1 < 0) {
-                throw new IllegalArgumentException("negative score for player1");
+            if (serverScore < 0) {
+                throw new IllegalArgumentException("negative score for server");
             }
-            if (scorePlayer2 >= 4) {
-                throw new IllegalArgumentException(AdvantagePlayer2.class + " shold be used");
+            if (receiverScore >= 4) {
+                throw new IllegalArgumentException(AdvantageReceiver.class + " shold be used");
             }
-            if (scorePlayer2 < 0) {
-                throw new IllegalArgumentException("negative score for player2");
+            if (receiverScore < 0) {
+                throw new IllegalArgumentException("negative score for receiver");
             }
-            this.scorePlayer1 = scorePlayer1;
-            this.scorePlayer2 = scorePlayer2;
-            Objects.requireNonNull(player1Wins, "player1Wins");
-            Objects.requireNonNull(player2Wins, "player2Wins");
-            this.player1Wins = player1Wins;
-            this.player2Wins = player2Wins;
+            this.serverScore = serverScore;
+            this.receiverScore = receiverScore;
+            Objects.requireNonNull(serverWins, "serverWins");
+            Objects.requireNonNull(receiverWins, "receiverWins");
+            this.serverWins = serverWins;
+            this.receiverWins = receiverWins;
         }
 
         @Override
-        public GameState player1WonPoint(GameState.GameDisplayContext context) {
+        public GameState serverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return this.player1Wins;
+            return this.serverWins;
         }
         @Override
-        public GameState player2WonPoint(GameState.GameDisplayContext context) {
+        public GameState receiverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return this.player2Wins;
+            return this.receiverWins;
         }
 
         @Override
@@ -195,7 +195,7 @@ final class InitialGameState {
         }
 
         private String getScore() {
-            return translate(this.scorePlayer1) + "-" + translate(this.scorePlayer2);
+            return translate(this.serverScore) + "-" + translate(this.receiverScore);
         }
 
         @Override
@@ -205,9 +205,9 @@ final class InitialGameState {
 
         @Override
         public FlipableGameState flip() {
-            // 3-0 (player1wins, (3,1)) -> 0-3((1-3), player2win)
+            // 3-0 (serverWins, (3,1)) -> 0-3((1-3), receiverWins)
             // REVIEW, recursive, ends up creating equal copies
-            return new GenericGameState(this.scorePlayer2, this.scorePlayer1, this.player2Wins.flip(), this.player1Wins.flip());
+            return new GenericGameState(this.receiverScore, this.serverScore, this.receiverWins.flip(), this.serverWins.flip());
         }
 
     }
@@ -217,36 +217,36 @@ final class InitialGameState {
      */
     private static final class All implements FlipableGameState {
 
-        private final GameState player1Wins;
+        private final GameState serverWins;
 
-        private final GameState player2Wins;
+        private final GameState receiverWins;
 
         private int score;
 
-        All(int score, GameState player1Wins, GameState player2Wins) {
+        All(int score, GameState serverWins, GameState receiverWins) {
             if (score > 2) {
                 throw new IllegalArgumentException("deuce should be used");
             }
             if (score < 0) {
                 throw new IllegalArgumentException("negative score not allowed");
             }
-            Objects.requireNonNull(player1Wins, "player1Wins");
-            Objects.requireNonNull(player2Wins, "player2Wins");
-            this.player1Wins = player1Wins;
-            this.player2Wins = player2Wins;
+            Objects.requireNonNull(serverWins, "serverWins");
+            Objects.requireNonNull(receiverWins, "receiverWins");
+            this.serverWins = serverWins;
+            this.receiverWins = receiverWins;
             this.score = score;
         }
 
         @Override
-        public GameState player1WonPoint(GameState.GameDisplayContext context) {
+        public GameState serverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return this.player1Wins;
+            return this.serverWins;
         }
 
         @Override
-        public GameState player2WonPoint(GameState.GameDisplayContext context) {
+        public GameState receiverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return this.player2Wins;
+            return this.receiverWins;
         }
 
         @Override
@@ -273,15 +273,15 @@ final class InitialGameState {
     private static final class Deuce implements FlipableGameState {
 
         @Override
-        public GameState player1WonPoint(GameState.GameDisplayContext context) {
+        public GameState serverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return ADVANTAGE_PLAYER1;
+            return ADVANTAGE_SERVER;
         }
 
         @Override
-        public GameState player2WonPoint(GameState.GameDisplayContext context) {
+        public GameState receiverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return ADVANTAGE_PLAYER2;
+            return ADVANTAGE_RECIVER;
         }
 
         @Override
@@ -316,64 +316,64 @@ final class InitialGameState {
 
     }
 
-    private static final class AdvantagePlayer1 extends Advantage {
+    private static final class AdvantageServer extends Advantage {
 
         @Override
-        public GameState player1WonPoint(GameState.GameDisplayContext context) {
+        public GameState serverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return WIN_PLAYER1;
+            return WIN_SERVER;
         }
 
         @Override
-        public GameState player2WonPoint(GameState.GameDisplayContext context) {
+        public GameState receiverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
             return DEUCE;
         }
 
         @Override
         protected String getPlayer(GameState.GameDisplayContext context) {
-            return context.getPlayer1();
+            return context.getServer();
         }
 
         @Override
         public FlipableGameState flip() {
-            return ADVANTAGE_PLAYER2;
+            return ADVANTAGE_RECIVER;
         }
 
         @Override
         public String toString() {
-            return "Advantage player1";
+            return "Advantage server";
         }
 
     }
 
-    private static final class AdvantagePlayer2 extends Advantage {
+    private static final class AdvantageReceiver extends Advantage {
 
         @Override
-        public GameState player1WonPoint(GameState.GameDisplayContext context) {
+        public GameState serverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
             return DEUCE;
         }
 
         @Override
-        public GameState player2WonPoint(GameState.GameDisplayContext context) {
+        public GameState receiverWonPoint(GameState.GameDisplayContext context) {
             Objects.requireNonNull(context);
-            return WIN_PLAYER2;
+            return WIN_RECIEVER;
         }
 
         @Override
         protected String getPlayer(GameState.GameDisplayContext context) {
-            return context.getPlayer2();
+            return context.getReceiver();
         }
 
         @Override
         public FlipableGameState flip() {
-            return ADVANTAGE_PLAYER1;
+            return ADVANTAGE_SERVER;
         }
 
         @Override
         public String toString() {
-            return "Advantage player2";
+            return "Advantage receiver";
         }
 
     }
@@ -386,7 +386,7 @@ final class InitialGameState {
         }
 
         @Override
-        public GameState player1WonPoint(GameDisplayContext context) {
+        public GameState serverWonPoint(GameDisplayContext context) {
             throw alreadyWon(context);
         }
 
@@ -395,7 +395,7 @@ final class InitialGameState {
         }
 
         @Override
-        public GameState player2WonPoint(GameDisplayContext context) {
+        public GameState receiverWonPoint(GameDisplayContext context) {
             throw alreadyWon(context);
         }
 
@@ -403,40 +403,40 @@ final class InitialGameState {
 
     }
 
-    private static final class WinPlayer1 extends WonGame {
+    private static final class WinServer extends WonGame {
 
         @Override
         protected String getPlayer(GameState.GameDisplayContext context) {
-            return context.getPlayer1();
+            return context.getServer();
         }
 
         @Override
         public FlipableGameState flip() {
-            return WIN_PLAYER2;
+            return WIN_RECIEVER;
         }
 
         @Override
         public String toString() {
-            return "Win for player1";
+            return "Win for server";
         }
 
     }
 
-    private static final class WinPlayer2 extends WonGame {
+    private static final class WinReceiver extends WonGame {
 
         @Override
         protected String getPlayer(GameState.GameDisplayContext context) {
-            return context.getPlayer2();
+            return context.getReceiver();
         }
 
         @Override
         public FlipableGameState flip() {
-            return WIN_PLAYER1;
+            return WIN_SERVER;
         }
 
         @Override
         public String toString() {
-            return "Win for player2";
+            return "Win for receiver";
         }
 
     }
