@@ -29,7 +29,6 @@ interface GameState {
 
     static GameState getInitialState() {
         Map<ScoreLookupKey, GameState> computed = new HashMap<>();
-//        computed.put(new ScoreLookupKey(2, 2), new ThirtyAll());
 
         computed.put(new ScoreLookupKey(3, 3), DEUCE);
         computed.put(new ScoreLookupKey(4, 4), DEUCE);
@@ -48,19 +47,23 @@ interface GameState {
             for (int j = i; j >= 0; j--) {
                 ScoreLookupKey key = new ScoreLookupKey(i, j);
                 if (!computed.containsKey(key)) {
-                    GameState player1Wins = i == 4 ? WIN_PLAYER1 : computed.get(key.incrementPlayer1());
+                    GameState player1Wins = computed.get(key.incrementPlayer1());
                     GameState player2Wins = computed.get(key.incrementPlayer2());
-                    GenericGameState state = new GenericGameState(i, j, player1Wins, player2Wins);
-                    computed.put(key, state);
-                    if (i != j) {
+                    if (i == j) {
+                        GameState state = new All(i, player1Wins, player2Wins);
+                        computed.put(key, state);
+                    } else {
+                        GameState state = new GenericGameState(i, j, player1Wins, player2Wins);
+                        computed.put(key, state);
                         // if i-j wasn't in the map, j-i will also not be in it, no need to check
                         computed.put(key.flipPlayerScores(), state.flip());
                     }
+                    
                 }
             }
 
         }
-        return new GenericGameState(0, 0, computed.get(new ScoreLookupKey(1, 0)), computed.get(new ScoreLookupKey(0, 1)));
+        return new All(0, computed.get(new ScoreLookupKey(1, 0)), computed.get(new ScoreLookupKey(0, 1)));
     }
 
     static final class ScoreLookupKey {
@@ -136,7 +139,7 @@ interface GameState {
         private final GameState player2Wins;
 
         GenericGameState(int scorePlayer1, int scorePlayer2, GameState player1Wins, GameState player2Wins) {
-            if (scorePlayer1 > 4 || scorePlayer2 > 4) {
+            if (scorePlayer1 >= 4 || scorePlayer2 >= 4) {
                 throw new IllegalArgumentException();
             }
             this.scorePlayer1 = scorePlayer1;
@@ -162,16 +165,11 @@ interface GameState {
         }
 
         private String getScore() {
-            if (this.scorePlayer1 == this.scorePlayer2) {
-                return translate(this.scorePlayer1) + "-All";
-            } else {
-                return translate(this.scorePlayer1) + "-" + translate(this.scorePlayer2);
-            }
+            return translate(this.scorePlayer1) + "-" + translate(this.scorePlayer2);
         }
 
         @Override
         public String toString() {
-//            return "(" + this.scorePlayer1 + ", " + this.scorePlayer2 + ")";
             return this.getScore();
         }
         
@@ -183,7 +181,31 @@ interface GameState {
 
     }
 
-    abstract class All implements GameState {
+    final class All implements GameState {
+
+        private final GameState player1Wins;
+
+        private final GameState player2Wins;
+
+        private int score;
+
+        All(int score, GameState player1Wins, GameState player2Wins) {
+            Objects.requireNonNull(player1Wins, "player1Wins");
+            Objects.requireNonNull(player2Wins, "player2Wins");
+            this.player1Wins = player1Wins;
+            this.player2Wins = player2Wins;
+            this.score = score;
+        }
+        
+        @Override
+        public GameState player1WonPoint(GameState.GameContext context) {
+            return this.player1Wins;
+        }
+        
+        @Override
+        public GameState player2WonPoint(GameState.GameContext context) {
+            return this.player2Wins;
+        }
 
         @Override
         public String getScore(GameState.GameContext context) {
@@ -191,51 +213,12 @@ interface GameState {
         }
 
         private String getScore() {
-            return translate(getScoreInt()) + "-All";
+            return translate(this.score) + "-All";
         }
 
-        protected abstract int getScoreInt();
-        
         @Override
         public String toString() {
             return this.getScore();
-        }
-
-    }
-
-    //    final class LoveAll extends All {
-    //
-    //        @Override
-    //        protected int getScore() {
-    //            return 0;
-    //        }
-    //
-    //    }
-    //
-    //    final class FifteenAll extends All {
-    //
-    //        @Override
-    //        protected int getScore() {
-    //            return 1;
-    //        }
-    //
-    //    }
-
-    final class ThirtyAll extends All {
-
-        @Override
-        public GameState player1WonPoint(GameState.GameContext context) {
-            return ADVANTAGE_PLAYER1;
-        }
-
-        @Override
-        public GameState player2WonPoint(GameState.GameContext context) {
-            return ADVANTAGE_PLAYER2;
-        }
-
-        @Override
-        protected int getScoreInt() {
-            return 2;
         }
 
         @Override
