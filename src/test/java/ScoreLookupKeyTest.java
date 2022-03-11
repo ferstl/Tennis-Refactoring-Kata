@@ -13,7 +13,7 @@ public class ScoreLookupKeyTest {
         Set<Integer> hashes = new HashSet<>();
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 5; j++) {
-                GameState.ScoreLookupKey key = new GameState.ScoreLookupKey(i, j);
+                InitialGameState.ScoreLookupKey key = new InitialGameState.ScoreLookupKey(i, j);
                 assertTrue(hashes.add(key.hashCode()));
             }
 

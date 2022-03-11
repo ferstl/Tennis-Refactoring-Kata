@@ -5,7 +5,7 @@ public class TennisGame1 implements TennisGame {
     private final String player1Name;
     private final String player2Name;
     private GameState gameState;
-    private final GameState.GameContext gameContext;
+    private final GameState.GameDisplayContext gameContext;
 
     public TennisGame1(String player1Name, String player2Name) {
         Objects.requireNonNull(player1Name, "player1Name");
@@ -15,8 +15,8 @@ public class TennisGame1 implements TennisGame {
         }
         this.player1Name = player1Name;
         this.player2Name = player2Name;
-        this.gameState = GameState.getInitialState();
-        this.gameContext = new GameState.GameContext() {
+        this.gameState = InitialGameState.getInitialState();
+        this.gameContext = new GameState.GameDisplayContext() {
             
             @Override
             public String getPlayer1() {
