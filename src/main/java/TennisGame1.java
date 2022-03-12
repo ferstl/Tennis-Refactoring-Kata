@@ -15,7 +15,7 @@ public class TennisGame1 implements TennisGame {
         }
         this.server = player1Name;
         this.receiver = player2Name;
-        this.gameState = InitialGameState.getInitialState();
+        this.gameState = GameStateMatchine.getInitialState();
         this.gameContext = new GameState.GameDisplayContext() {
 
             @Override

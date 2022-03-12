@@ -2,7 +2,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-final class InitialGameState {
+final class GameStateMatchine {
 
     private static final FlipableGameState ADVANTAGE_SERVER = new AdvantageServer();
 
@@ -14,11 +14,11 @@ final class InitialGameState {
 
     private static final FlipableGameState DEUCE = new Deuce();
 
-    private static final GameState INITIAL_STATE = computeInitialState();
+    private static final GameState LOVE_ALL = computeInitialState();
 
     private interface FlipableGameState extends GameState {
 
-        FlipableGameState flip();
+        FlipableGameState flipPlayerScores();
 
     }
 
@@ -26,6 +26,7 @@ final class InitialGameState {
 
         Map<GameStateLookupKey, FlipableGameState> computed = new HashMap<>();
 
+        // initialize the map with well known, special states
         computed.put(new GameStateLookupKey(3, 3), DEUCE);
         computed.put(new GameStateLookupKey(4, 4), DEUCE);
 
@@ -39,11 +40,17 @@ final class InitialGameState {
             computed.put(key.flipPlayerScores(), WIN_RECIEVER);
         }
 
+        // Compute a game state by looking up the two possible following ones
+        // (either the server or the receiver wins).
+        // Do it in reverse order as the terminal have already been added to the map
+        // above.
+        //
         // No need to start with 4, because all 4 based states are already in the map.
         // They are either wins or "Advantage player X".
         for (int i = 3; i > 0; i--) {
             for (int j = i; j >= 0; j--) {
                 GameStateLookupKey key = new GameStateLookupKey(i, j);
+                // ignore the terminal and special cases added above
                 if (!computed.containsKey(key)) {
                     FlipableGameState serverWins = computed.get(key.incrementServer());
                     FlipableGameState receiverWins = computed.get(key.incrementReceiver());
@@ -54,7 +61,7 @@ final class InitialGameState {
                         FlipableGameState state = new GenericGameState(i, j, serverWins, receiverWins);
                         computed.put(key, state);
                         // if i-j wasn't in the map then j-i will also not be in the map, no need to check
-                        computed.put(key.flipPlayerScores(), state.flip());
+                        computed.put(key.flipPlayerScores(), state.flipPlayerScores());
                     }
 
                 }
@@ -65,7 +72,7 @@ final class InitialGameState {
     }
 
     static GameState getInitialState() {
-        return INITIAL_STATE;
+        return LOVE_ALL;
     }
 
     /**
@@ -204,10 +211,10 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             // 3-0 (serverWins, (3,1)) -> 0-3((1-3), receiverWins)
             // REVIEW, recursive, ends up creating equal copies
-            return new GenericGameState(this.receiverScore, this.serverScore, this.receiverWins.flip(), this.serverWins.flip());
+            return new GenericGameState(this.receiverScore, this.serverScore, this.receiverWins.flipPlayerScores(), this.serverWins.flipPlayerScores());
         }
 
     }
@@ -264,7 +271,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return this;
         }
 
@@ -294,7 +301,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return this;
         }
 
@@ -336,7 +343,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return ADVANTAGE_RECIVER;
         }
 
@@ -367,7 +374,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return ADVANTAGE_SERVER;
         }
 
@@ -411,7 +418,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return WIN_RECIEVER;
         }
 
@@ -430,7 +437,7 @@ final class InitialGameState {
         }
 
         @Override
-        public FlipableGameState flip() {
+        public FlipableGameState flipPlayerScores() {
             return WIN_SERVER;
         }
 

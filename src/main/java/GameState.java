@@ -32,6 +32,10 @@ interface GameState {
     GameState receiverWonPoint(GameDisplayContext context);
     String getScore(GameDisplayContext context);
 
+    /**
+     * Accessor for game-specific display-only information to keep the instances
+     * of {@link GameState} stateless so they can be shared.
+     */
     interface GameDisplayContext {
 
         /**
